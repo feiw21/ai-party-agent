@@ -1,6 +1,12 @@
-datasets 
-smolagents 
-langchain-community 
+datasets
+smolagents
+langchain-community
 rank_bm25
 duckduckgo-search
 langchain-huggingface
+streamlit
+openai
+langgraph
+langchain
+langchain-core
+huggingface-hub
