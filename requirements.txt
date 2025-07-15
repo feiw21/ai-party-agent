@@ -1,5 +1,5 @@
 datasets
-smolagents
+langchain_openai
 langchain-community
 duckduckgo-search
 langchain-huggingface

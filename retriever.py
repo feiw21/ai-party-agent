@@ -43,10 +43,13 @@ vector_retriever = db.as_retriever(search_kwargs={"k": 3})
 
 def extract_text(query: str) -> str:
     """Retrieves detailed information about gala guests based on their name or relation using dense retrieval."""
+    print(f"🔍 DEBUG: guest_info_retriever called with query: '{query}'")
     results = vector_retriever.invoke(query)
     if results:
+        print(f"🔍 DEBUG: guest_info_retriever found {len(results)} results")
         return "\n\n".join([doc.page_content for doc in results])
     else:
+        print(f"🔍 DEBUG: guest_info_retriever found no results")
         return "No matching guest information found."
 
 guest_info_tool = Tool(

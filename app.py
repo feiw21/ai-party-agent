@@ -5,45 +5,27 @@ from langchain_core.messages import AnyMessage, HumanMessage, AIMessage
 from langgraph.graph import START, StateGraph
 from langgraph.graph.message import add_messages
 from langgraph.prebuilt import ToolNode, tools_condition
-from openai import OpenAI
+from langchain_openai import ChatOpenAI
 
 from retriever import guest_info_tool
 from tools import web_search_tool, hub_stats_tool
 
 ROLLING_MEMORY_WINDOW = 50
 
-class OpenAILLM:
-    def __init__(self, model="gpt-4", api_key=None):
-        self.client = OpenAI(api_key=api_key or os.environ["OPENAI_API_KEY"])
-        self.model = model
-
-    def invoke(self, messages):
-        # Format messages for OpenAI API
-        chat_messages = []
-        for msg in messages:
-            if isinstance(msg, AIMessage):
-                chat_messages.append({"role": "assistant", "content": msg.content})
-            else:
-                chat_messages.append({"role": "user", "content": msg.content})
-        response = self.client.chat.completions.create(
-            model=self.model,
-            messages=chat_messages,
-            max_tokens=512,
-        )
-        return {"messages": [AIMessage(content=response.choices[0].message.content)]}
-
-llm = OpenAILLM(model="gpt-4")
-
 tools = [guest_info_tool, web_search_tool, hub_stats_tool]
+
+# Use LangChain's ChatOpenAI for full tool support
+llm = ChatOpenAI(model="gpt-4", openai_api_key=os.environ["OPENAI_API_KEY"])
 
 # Generate the AgentState and Agent graph
 class AgentState(TypedDict):
     messages: Annotated[list[AnyMessage], add_messages]
 
 def assistant(state: AgentState):
-    response = llm.invoke(state["messages"])
+    llm_with_tools = llm.bind_tools(tools)
+    response = llm_with_tools.invoke(state["messages"])
     return {
-        "messages": response["messages"]
+        "messages": [response]
     }
 
 ## The graph
@@ -75,23 +57,32 @@ def run_agent_with_tools(messages, max_steps=10):
         messages.extend(new_msgs)
         last_msg = messages[-1]
 
-        # Check if the last message is a tool call (adjust as needed for your framework)
+        # Debug: Let's see what last_msg actually looks like
+        # print(f"🔍 DEBUG: last_msg type: {type(last_msg)}")
+        print(f"🔍 DEBUG: last_msg content: {last_msg.content}")
+
+        # Check if the last message is a tool call
         if hasattr(last_msg, "tool_call") or (
             isinstance(last_msg.content, dict) and "name" in last_msg.content
         ):
-            # Simulate tool execution (replace with your actual tool execution logic)
-            tool_name = last_msg.content["name"]
-            tool_args = last_msg.content["arguments"]
+            # Handle tool call
+            if hasattr(last_msg, "tool_call"):
+                tool_call = last_msg.tool_call
+            else:
+                tool_call = last_msg.content
+            
+            tool_name = tool_call.get("name")
+            tool_args = tool_call.get("arguments", tool_call.get("input", ""))
+            
             # Find the tool by name
             tool = next((t for t in tools if t.name == tool_name), None)
             if tool:
-                # Some tools expect arguments as a single string, others as kwargs
-                if isinstance(tool_args, dict) and "__arg1" in tool_args:
-                    tool_input = tool_args["__arg1"]
-                    tool_result = tool.func(tool_input)
-                else:
-                    tool_result = tool.func(**tool_args)
-                messages.append(AIMessage(content=tool_result))
+                # Execute the tool
+                try:
+                    tool_result = tool.func(tool_args)
+                    messages.append(AIMessage(content=tool_result))
+                except Exception as e:
+                    messages.append(AIMessage(content=f"Error executing tool {tool_name}: {str(e)}"))
             else:
                 messages.append(AIMessage(content=f"Tool '{tool_name}' not found."))
         else:
