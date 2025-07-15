@@ -61,13 +61,6 @@ llm = OpenAILLM(model="gpt-4")  # or "gpt-3.5-turbo"
 - [Setup Guide](docs/setup.md) - Get started in 5 minutes
 - [How It Works](docs/architecture.md) - Simple technical overview
 
-## 🤝 Contributing
-
-1. Fork the repository
-2. Create a feature branch
-3. Make your changes
-4. Open a Pull Request
-
 ---
 
 **Happy party planning with Alfred! 🎉** 
