@@ -1,9 +1,9 @@
 import datasets
-from langchain_core.documents import Document
-# from langchain_community.retrievers import BM25Retriever
-from langchain_community.vectorstores import FAISS
-from langchain.embeddings import HuggingFaceEmbeddings
+
+from langchain_community.embeddings import HuggingFaceEmbeddings
 from langchain.tools import Tool
+from langchain_core.documents import Document
+from langchain_community.vectorstores import FAISS
 
 
 # Part 1 Load and prepare dataset
