@@ -7,8 +7,8 @@ from langgraph.graph.message import add_messages
 from langgraph.prebuilt import ToolNode, tools_condition
 from langchain_openai import ChatOpenAI
 
-from retriever import guest_info_tool
-from tools import web_search_tool, hub_stats_tool
+from core.retriever import guest_info_tool
+from core.tools import web_search_tool, hub_stats_tool
 
 # ============================================================================
 # CONSTANTS
@@ -39,11 +39,12 @@ def assistant(state: AgentState):
     response = llm_with_tools.invoke(state["messages"])
     
     # Debug: Show what the response object looks like
-    print(f"🔍 DEBUG: response type: {type(response)}")
-    print(f"🔍 DEBUG: response content: {response.content}")
-    print(f"🔍 DEBUG: response has tool_calls: {hasattr(response, 'tool_calls')}")
+    print(f"🔍 DEBUG: Assistant processing request...")
+    print(f"🔍 DEBUG: Response type: {type(response)}")
+    print(f"🔍 DEBUG: Response content: {response.content[:100]}...")
+    print(f"🔍 DEBUG: Has tool calls: {hasattr(response, 'tool_calls') and response.tool_calls}")
     if hasattr(response, 'tool_calls') and response.tool_calls:
-        print(f"🔍 DEBUG: response tool_calls: {response.tool_calls}")
+        print(f"🔍 DEBUG: Tool calls detected: {[tc.get('name') for tc in response.tool_calls]}")
     
     return {
         "messages": [response]
@@ -67,15 +68,12 @@ def run_agent_with_tools(messages, max_steps=10):
         messages.extend(new_msgs)
         last_msg = messages[-1]
 
-        # Debug: Let's see what last_msg actually looks like
-        print(f"🔍 DEBUG: last_msg type: {type(last_msg)}")
-        print(f"🔍 DEBUG: last_msg content: {last_msg.content}")
-        print(f"🔍 DEBUG: last_msg has tool_calls: {hasattr(last_msg, 'tool_calls')}")
+        # Debug: Show the current message being processed
+        print(f"🔍 DEBUG: Processing message: {type(last_msg).__name__}")
         if hasattr(last_msg, 'tool_calls') and last_msg.tool_calls:
-            print(f"🔍 DEBUG: last_msg tool_calls: {last_msg.tool_calls}")
-        print(f"🔍 DEBUG: last_msg has tool_call: {hasattr(last_msg, 'tool_call')}")
-        if hasattr(last_msg, 'tool_call') and last_msg.tool_call:
-            print(f"🔍 DEBUG: last_msg tool_call: {last_msg.tool_call}")
+            print(f"🔍 DEBUG: Tool calls found: {[tc.get('name') for tc in last_msg.tool_calls]}")
+        else:
+            print(f"🔍 DEBUG: No tool calls - final response")
 
         # Check if the last message is a tool call
         if hasattr(last_msg, "tool_call") or (

@@ -1,10 +1,10 @@
 import streamlit as st
-from app import run_agent_with_tools, ROLLING_MEMORY_WINDOW, build_agent_graph
+from core.app import run_agent_with_tools, ROLLING_MEMORY_WINDOW, build_agent_graph
 from langchain_core.messages import HumanMessage
 
 st.title("🎩 Alfred - Your AI Assistant")
 
-# Initialize the agent (only once)
+# Initialize the agent
 if "agent" not in st.session_state:
     with st.spinner("🔧 Initializing Alfred..."):
         st.session_state["agent"] = build_agent_graph()
@@ -31,14 +31,15 @@ if prompt := st.chat_input("What would you like to know?"):
     with st.chat_message("assistant"):
         message_placeholder = st.empty()
         
-        # Run the agent with tool execution loop
+        # Run the agent using the built graph
         try:
-            response = run_agent_with_tools(st.session_state["messages"])
-            # Get the final response (last message from the agent)
-            final_response = response[-1].content
+            # Use the pre-built agent from session state
+            agent_response = st.session_state["agent"].invoke({"messages": st.session_state["messages"]})
+            # Get the final response from the agent
+            final_response = agent_response["messages"][-1].content
             message_placeholder.markdown(final_response)
             # Update session state with all new messages
-            st.session_state["messages"] = response
+            st.session_state["messages"] = agent_response["messages"]
         except Exception as e:
             st.error(f"Error: {str(e)}")
             message_placeholder.markdown("I apologize, but I encountered an error. Please try again.")

@@ -9,3 +9,5 @@ langgraph
 langchain
 langchain-core
 huggingface-hub
+langfuse
+pandas
