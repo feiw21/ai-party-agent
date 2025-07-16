@@ -1,6 +1,6 @@
-# LangFuse US Cloud Setup Guide
+# LangFuse Cloud Setup Guide
 
-This guide helps you set up LangFuse with the US cloud instance for Alfred AI Agent monitoring and evaluation.
+This guide helps you set up LangFuse (with the US cloud instance) for Alfred AI Agent monitoring and evaluation.
 
 ## 1. Get Your LangFuse US Cloud Credentials
 
