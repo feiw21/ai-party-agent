@@ -87,6 +87,7 @@ Web-based chat interface:
 if prompt := st.chat_input("What would you like to know?"):
     response = run_agent_with_tools(messages)
 ```
+Multi-turn conversations are handled by Streamlit's session state and reactive execution model where `st.session_state` maintains data between executions and each user input triggers a fresh script execution with previous context being automatically preserved.
 
 ## 🔄 How It Works
 

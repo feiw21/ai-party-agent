@@ -1,8 +1,13 @@
 import streamlit as st
-from app import run_agent_with_tools, ROLLING_MEMORY_WINDOW
+from app import run_agent_with_tools, ROLLING_MEMORY_WINDOW, build_agent_graph
 from langchain_core.messages import HumanMessage
 
 st.title("🎩 Alfred - Your AI Assistant")
+
+# Initialize the agent (only once)
+if "agent" not in st.session_state:
+    with st.spinner("🔧 Initializing Alfred..."):
+        st.session_state["agent"] = build_agent_graph()
 
 # Initialize chat history
 if "messages" not in st.session_state:
