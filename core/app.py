@@ -41,7 +41,7 @@ def assistant(state: AgentState):
     # Debug: Show what the response object looks like
     print(f"🔍 DEBUG: Assistant processing request...")
     print(f"🔍 DEBUG: Response type: {type(response)}")
-    print(f"🔍 DEBUG: Response content: {response.content[:100]}...")
+    print(f"🔍 DEBUG: Initial response content: {response.content[:50]}...")
     print(f"🔍 DEBUG: Has tool calls: {hasattr(response, 'tool_calls') and response.tool_calls}")
     if hasattr(response, 'tool_calls') and response.tool_calls:
         print(f"🔍 DEBUG: Tool calls detected: {[tc.get('name') for tc in response.tool_calls]}")
@@ -50,59 +50,39 @@ def assistant(state: AgentState):
         "messages": [response]
     }
 
-def run_agent_with_tools(messages, max_steps=10):
+# ============================================================================
+# GLOBAL AGENT INSTANCE
+# ============================================================================
+# Create a global agent instance that can be shared across interfaces
+_agent_instance = None
+
+def get_agent():
+    """Get or create the global agent instance."""
+    global _agent_instance
+    if _agent_instance is None:
+        _agent_instance = build_agent_graph()
+    return _agent_instance
+
+def run_agent_with_tools(messages, agent=None):
     """
-    Runs the agent in a loop, handling tool calls, until a final answer is produced.
+    Runs the agent that automatically handles tool calls, until a final answer is produced.
     
     Args:
-        messages: List of conversation messages
-        max_steps: Maximum number of tool execution steps
+        messages: List of conversation messages (must include the latest user message)
+        agent: Optional agent instance. If None, uses global agent.
     
     Returns:
-        Updated messages list with final response
+        The final response from the agent (list of messages)
     """
-    for _ in range(max_steps):
-        response = alfred.invoke({"messages": messages[-ROLLING_MEMORY_WINDOW:]})
-        # Add the new messages from the agent to the conversation
-        new_msgs = response["messages"][len(messages):]
-        messages.extend(new_msgs)
-        last_msg = messages[-1]
-
-        # Debug: Show the current message being processed
-        print(f"🔍 DEBUG: Processing message: {type(last_msg).__name__}")
-        if hasattr(last_msg, 'tool_calls') and last_msg.tool_calls:
-            print(f"🔍 DEBUG: Tool calls found: {[tc.get('name') for tc in last_msg.tool_calls]}")
-        else:
-            print(f"🔍 DEBUG: No tool calls - final response")
-
-        # Check if the last message is a tool call
-        if hasattr(last_msg, "tool_call") or (
-            isinstance(last_msg.content, dict) and "name" in last_msg.content
-        ):
-            # Handle tool call
-            if hasattr(last_msg, "tool_call"):
-                tool_call = last_msg.tool_call
-            else:
-                tool_call = last_msg.content
-            
-            tool_name = tool_call.get("name")
-            tool_args = tool_call.get("arguments", tool_call.get("input", ""))
-            
-            # Find the tool by name
-            tool = next((t for t in tools if t.name == tool_name), None)
-            if tool:
-                # Execute the tool
-                try:
-                    tool_result = tool.func(tool_args)
-                    messages.append(AIMessage(content=tool_result))
-                except Exception as e:
-                    messages.append(AIMessage(content=f"Error executing tool {tool_name}: {str(e)}"))
-            else:
-                messages.append(AIMessage(content=f"Tool '{tool_name}' not found."))
-        else:
-            # Final answer produced
-            break
-    return messages
+    if agent is None:
+        agent = get_agent()
+    
+    if not messages:
+        raise ValueError("Messages list cannot be empty")
+    
+    # Process with agent
+    response = agent.invoke({"messages": messages[-ROLLING_MEMORY_WINDOW:]})
+    return response["messages"]
 
 # ============================================================================
 # GRAPH CONSTRUCTION
@@ -158,8 +138,8 @@ def save_graph_visualization(graph, filename="docs/alfred_agent_graph.png"):
 # ============================================================================
 if __name__ == "__main__":
     # Build the agent
-    alfred = build_agent_graph()
-    
+    alfred = get_agent()
+
     # Save graph visualization
     save_graph_visualization(alfred)
     
