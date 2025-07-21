@@ -22,6 +22,12 @@ class AgentState(TypedDict):
     messages: Annotated[list[AnyMessage], add_messages]
 
 # ============================================================================
+# GLOBAL AGENT INSTANCE
+# ============================================================================
+# Global agent instance - created once and shared across all interfaces
+_AGENT_INSTANCE = None
+
+# ============================================================================
 # CONFIGURATION
 # ============================================================================
 # Tool configuration
@@ -50,38 +56,30 @@ def assistant(state: AgentState):
         "messages": [response]
     }
 
-# ============================================================================
-# GLOBAL AGENT INSTANCE
-# ============================================================================
-# Create a global agent instance that can be shared across interfaces
-_agent_instance = None
-
 def get_agent():
     """Get or create the global agent instance."""
-    global _agent_instance
-    if _agent_instance is None:
-        _agent_instance = build_agent_graph()
-    return _agent_instance
+    global _AGENT_INSTANCE
+    if _AGENT_INSTANCE is None:
+        _AGENT_INSTANCE = build_agent_graph()
+    return _AGENT_INSTANCE
 
-def run_agent_with_tools(messages, agent=None):
+def run_agent_with_tools(messages):
     """
     Runs the agent that automatically handles tool calls, until a final answer is produced.
     
     Args:
-        messages: List of conversation messages (must include the latest user message)
-        agent: Optional agent instance. If None, uses global agent.
+        messages: List of conversation messages
     
     Returns:
-        The final response from the agent (list of messages)
+        Updated messages list with final response
     """
-    if agent is None:
-        agent = get_agent()
+    agent = get_agent()  # Use global agent
     
-    if not messages:
-        raise ValueError("Messages list cannot be empty")
-    
-    # Process with agent
+    # LangGraph agents handle tool calls automatically
+    # Just invoke the agent and it will handle the tool loop internally
     response = agent.invoke({"messages": messages[-ROLLING_MEMORY_WINDOW:]})
+    
+    # Return the complete conversation with the final response
     return response["messages"]
 
 # ============================================================================
